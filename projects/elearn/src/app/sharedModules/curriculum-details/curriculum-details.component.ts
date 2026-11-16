@@ -38,6 +38,9 @@ export class CurriculumDetailsComponent implements OnInit, OnDestroy {
   selectedTab = 'S'
   curriculamNextPrev:any;
   Curriculams:any;
+  completing = false;
+  completeError = '';
+  private autoCompleteAttempted = false;
   @ViewChild('scrollContainer') scrollContainer!: ElementRef;
 
   constructor(
@@ -97,6 +100,9 @@ export class CurriculumDetailsComponent implements OnInit, OnDestroy {
       .subscribe((id) => {
         if (!id) return;
         this.curriculumId = id;
+        this.autoCompleteAttempted = false;
+        this.completing = false;
+        this.completeError = '';
 
         this.curriculumDetails = JSON.parse(localStorage.getItem('curriculum'));
         const role = +sessionStorage.getItem('Role');
@@ -131,6 +137,81 @@ export class CurriculumDetailsComponent implements OnInit, OnDestroy {
   navigateToNext(id){
     var path=`/app/${this.redirectTo}/details/curriculum-details/${id}`
     this.route.navigate([path]);
+  }
+
+  /** Last lesson in this course. Next is hidden here, so review modules need their own finish action. */
+  get isLastCurriculum(): boolean {
+    if (!this.Curriculams?.length || !this.curriculumId) return false;
+    const ids = this.Curriculams.map((x: any) => x.id);
+    const ix = ids.indexOf(this.curriculumId);
+    return ix !== -1 && ix === ids.length - 1;
+  }
+
+  get hasQuestions(): boolean {
+    return (this.curriculumDetails?.curriculumQuestionCount ?? 0) > 0;
+  }
+
+  get hasVideos(): boolean {
+    return (this.curriculumDetails?.curriculumVideoLectureCount ?? 0) > 0;
+  }
+
+  /** Learner on the last lesson, and that lesson is finished by review rather than a quiz. */
+  get showCompleteTraining(): boolean {
+    const roleOk = this.role === Role.Student || this.role === Role.Company;
+    return roleOk && this.isLastCurriculum && !this.curriculumDetails?.isCompleted && !this.hasQuestions;
+  }
+
+  get showViewCertificate(): boolean {
+    const roleOk = this.role === Role.Student || this.role === Role.Company;
+    if (!roleOk || !this.isLastCurriculum || !this.curriculumDetails?.isCompleted) return false;
+    return !(this.Curriculams || []).some((c: any) => !c.isCompleted);
+  }
+
+  goToCertificates(): void {
+    this.route.navigate([`/app/${this.redirectTo}/certificate`]);
+  }
+
+  /**
+   * Mark the current lesson passed. Used by the Complete training button, and automatically
+   * for a last lesson that is study material only (no quiz, no video).
+   */
+  completeTraining(automatic = false): void {
+    if (this.completing || this.curriculumDetails?.isCompleted || this.hasQuestions || !this.curriculumId) return;
+    if (automatic && (this.hasVideos || this.autoCompleteAttempted)) return;
+    if (automatic) this.autoCompleteAttempted = true;
+    this.completing = true;
+    this.completeError = '';
+    this.subscription.add(
+      this.appService.saveCurriculumWatchProgress({
+        curriculumId: this.curriculumId,
+        secondsWatched: 1,
+        videoDurationSeconds: 1
+      }).subscribe({
+        next: () => {
+          this.completing = false;
+          this.markLocalCurriculumComplete();
+        },
+        error: () => {
+          this.completing = false;
+          if (!automatic) {
+            this.completeError = 'Could not save completion. Please try again.';
+          }
+        }
+      })
+    );
+  }
+
+  private markLocalCurriculumComplete(): void {
+    this.curriculumDetails = { ...(this.curriculumDetails || {}), isCompleted: true };
+    const list = [...(this.Curriculams || [])];
+    const idx = list.findIndex((c: any) => c.id === this.curriculumId);
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], isCompleted: true };
+      this.Curriculams = list;
+    }
+    localStorage.setItem('curriculum', JSON.stringify(this.curriculumDetails));
+    localStorage.setItem('curriculams', JSON.stringify(this.Curriculams || list));
+    this._authService.curriculumProgressChanged.next(this.curriculumId);
   }
 
   /** trackBy for the curriculum sidebar list so switching topics doesn't re-render every row. */
@@ -209,6 +290,10 @@ export class CurriculumDetailsComponent implements OnInit, OnDestroy {
 
     if (!this.showQuestionTab) {
       this._service.startTest(null, CurriculamStatus.Curriculums, this.curriculumId);
+    }
+    // Last lesson is a review page: no quiz and no Next. Opening it finishes the training.
+    if (this.showCompleteTraining && !this.hasVideos) {
+      this.completeTraining(true);
     }
     //  if(QuestionTab){
     //   setTimeout(() => {

@@ -539,6 +539,20 @@
   line-height: 1;
 }
 
+.complete-training-note,
+.complete-training-error {
+  margin: 0 20px 16px;
+  font-size: 0.875rem;
+}
+
+.complete-training-note {
+  color: #15803d;
+}
+
+.complete-training-error {
+  color: #b91c1c;
+}
+
 /* Mobile: compact layout, clear title, nav bar above bottom nav */
 @media (max-width: 767px) {
   .curriculum-container {

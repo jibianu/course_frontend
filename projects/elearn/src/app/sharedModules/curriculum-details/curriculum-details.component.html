@@ -92,7 +92,20 @@
                 (click)="navigateToNext(curriculamNextPrev.next)">
           Next <span class="button-icon">→</span>
         </button>
+        <button class="nav-button next-button" *ngIf="showCompleteTraining"
+                type="button"
+                (click)="completeTraining()"
+                [disabled]="completing">
+          {{ completing ? 'Saving…' : 'Complete training' }}
+        </button>
+        <button class="nav-button next-button" *ngIf="showViewCertificate"
+                type="button"
+                (click)="goToCertificates()">
+          View certificate
+        </button>
       </div>
+      <p class="complete-training-note" *ngIf="showViewCertificate">This module is complete. You can generate your certificate now.</p>
+      <p class="complete-training-error" *ngIf="completeError">{{ completeError }}</p>
     </div>
   </div>
 </div>

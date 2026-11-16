@@ -69,6 +69,8 @@ export class AuthenticationService {
     curriculumDetails = new Subject<string>();
     selectedContent = new Subject<string>();
     courseStructure = new Subject<string>();
+    /** Curriculum id that a learner just completed, so the course sidebar can refresh progress. */
+    curriculumProgressChanged = new Subject<string>();
 
     commonCourse = new Subject<any>();
 

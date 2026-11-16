@@ -585,33 +585,14 @@ export class PublicAppService {
                 catchError(() => of(null as any[] | null))
             );
 
-        const buildFromPublicListing = (): Observable<any[]> =>
-            forkJoin({
-                categories: this.getCategories(),
-                courses: this.http
-                    .get<any>(`${this.apiUrl}api/public/courses`, {
-                        params: new HttpParams().set('pageNumber', '1').set('pageSize', '100')
-                    })
-                    .pipe(
-                        map((body) => {
-                            const list = body?.results ?? body?.Results ?? normalizeList(body);
-                            return Array.isArray(list) ? list : [];
-                        }),
-                        catchError(() => of([]))
-                    )
-            }).pipe(map(({ categories, courses }) => this.buildDashboardFromPublicListing(categories, courses)));
-
+        // One primary call + at most one legacy fallback — avoids 3–4 chained 30s timeouts when API is slow.
         const resolveDashboard = (): Observable<any[]> =>
             fetchPublicDashboard().pipe(
-                switchMap((list) => (list && list.length > 0 ? of(list) : buildFromPublicListing())),
                 switchMap((list) => {
                     if (list && list.length > 0) {
                         return of(list);
                     }
-                    return race([
-                        fetchLegacy(legacyDashboardUrl),
-                        timer(12000).pipe(map(() => null as any[] | null))
-                    ]).pipe(
+                    return fetchLegacy(legacyDashboardUrl).pipe(
                         switchMap((legacyList) =>
                             legacyList && legacyList.length > 0 ? of(legacyList) : fetchLegacy(legacyApiUrl)
                         ),

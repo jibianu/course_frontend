@@ -109,8 +109,12 @@ export class PublicCourseHomeComponent implements OnInit, OnDestroy {
           this.viewLoading = false;
           this.cdr.markForCheck();
         },
-        error: () => {
+        error: (err) => {
           this.viewLoading = false;
+          if (!this.error) {
+            this.error = err?.error?.message || err?.message || 'Failed to load categories. Please refresh the page.';
+          }
+          this.backendAvailable = false;
           this.cdr.markForCheck();
         }
       })

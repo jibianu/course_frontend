@@ -106,6 +106,23 @@ export class CourseDetailsComponent implements OnInit, DoCheck, OnDestroy {
     // Sync selected topic from child route (curriculum-details) so counts update on Next/Previous
     this.syncSelectedCurriculumFromRoute();
     this.subscription.add(
+      this.authService.curriculumProgressChanged.subscribe((curriculumId: string) => {
+        if (!curriculumId || !this.curriculumList?.length) {
+          if (this.courseId) this.getCurriculumList(this.courseId);
+          return;
+        }
+        const item = this.curriculumList.find((c: any) => c.id === curriculumId);
+        if (item && !item.isCompleted) {
+          item.isCompleted = true;
+          this.completedTask = Math.min(this.totalTask, (this.completedTask || 0) + 1);
+          if (this.selectedCurriculumItem?.id === curriculumId) {
+            this.selectedCurriculumItem = { ...this.selectedCurriculumItem, isCompleted: true };
+          }
+        }
+        if (this.courseId) this.getCurriculumList(this.courseId);
+      })
+    );
+    this.subscription.add(
       this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
         this.syncSelectedCurriculumFromRoute();
         // Re-apply breadcrumb (course name + category) when navigating within details so it doesn’t show "Course"

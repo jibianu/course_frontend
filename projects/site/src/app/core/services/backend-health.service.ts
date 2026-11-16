@@ -83,7 +83,7 @@ export class BackendHealthService {
     }
 
     // Use a lightweight endpoint for health check
-    const healthCheckUrl = `${this.apiUrl}api/public/categories`;
+    const healthCheckUrl = `${this.apiUrl}api/health`;
     console.log(`🔍 Health check: Testing backend at ${healthCheckUrl}`);
     
     return this.http.get(healthCheckUrl, { 

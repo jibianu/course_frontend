@@ -85,7 +85,11 @@ export class TimeoutInterceptor implements HttpInterceptor {
     }
 
     if (u.includes('/api/public/categories/dashboard')) {
-      return 30000;
+      return 65000;
+    }
+
+    if (u.includes('/api/health') || u.endsWith('/health')) {
+      return 8000;
     }
 
     return this.DEFAULT_TIMEOUT;
